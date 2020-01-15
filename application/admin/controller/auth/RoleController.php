@@ -7,6 +7,7 @@ use app\common\enums\ErrorCode;
 use app\common\model\auth\AuthPermission;
 use app\common\model\auth\AuthPermissionRule;
 use \app\common\model\auth\AuthRole;
+use app\common\utils\TreeUtils;
 use app\common\vo\ResultVo;
 
 /**
@@ -68,7 +69,7 @@ class RoleController extends BaseCheckUser
 
         $rule_list = AuthPermissionRule::getLists([],'id ASC');
 
-        $merge_list = AuthPermissionRule::cateMerge($rule_list,'id','pid',0);
+        $merge_list = TreeUtils::cateMerge($rule_list,'id','pid',0);
         $res['auth_list'] = $merge_list;
         $res['checked_keys'] = $checked_keys;
         return ResultVo::success($res);

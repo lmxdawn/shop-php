@@ -49,32 +49,6 @@ class LoginController extends Base
 
         unset($info['password']);
 
-        // 权限信息
-        $authRules = [];
-        if ($user_name == 'admin'){
-            $authRules = ['admin'];
-        }else{
-            $role_ids = AuthRoleAdmin::where('admin_id',$admin->id)->column('role_id');
-            if ($role_ids){
-                $permission_rule_ids = AuthPermission::where('role_id','in',$role_ids)
-                    ->field(['permission_rule_id'])
-                    ->select();
-                foreach ($permission_rule_ids as $key=>$val){
-                    $name = AuthPermissionRule::where('id',$val['permission_rule_id'])->value('name');
-                    if ($name){
-                        $authRules[] = $name;
-                    }
-                }
-            }
-        }
-        $info['authRules'] = $authRules;
-        // $info['authRules'] = [
-        //     'user_manage',
-        //     'user_manage/admin_manage',
-        //     'admin/admin/index',
-        //     'admin/role/index',
-        //     'admin/auth_admin/index',
-        // ];
         // 保存用户信息
         $loginInfo = AuthAdmin::loginInfo($info['id'],$info);
         $admin->last_login_ip = request()->ip();
@@ -97,7 +71,27 @@ class LoginController extends Base
         }
         $res['id'] = !empty($res['id']) ? intval($res['id']) : 0;
         $res['avatar'] = !empty($res['avatar']) ? PublicFileUtils::createUploadUrl($res['avatar']) : '';
-        // $res['roles'] = ['admin'];
+
+        $authRules = [];
+        if (!empty($res["username"]) && $res["username"] == "admin") {
+            $authRules = ['admin'];
+        } else {
+            // 获取权限列表
+            $role_ids = AuthRoleAdmin::where('admin_id', $res['id'])->column('role_id');
+            if ($role_ids){
+                $permission_rules = AuthPermission::where('role_id','in',$role_ids)
+                    ->field(['permission_rule_id'])
+                    ->select();
+                $permission_rule_ids = [];
+                foreach ($permission_rules as $v) {
+                    $permission_rule_ids[] = $v['permission_rule_id'];
+                }
+                $permission_rule_ids = array_unique($permission_rule_ids);
+                $rules = AuthPermissionRule::where('id', "in", $permission_rule_ids)->field("name")->select();
+                $authRules = $rules ? array_column($rules->toArray(), "name") : [];
+            }
+        }
+        $res['authRules'] = $authRules;
         return ResultVo::success($res);
     }
 

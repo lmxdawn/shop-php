@@ -6,6 +6,7 @@ use app\admin\controller\BaseCheckUser;
 use app\common\enums\ErrorCode;
 use app\common\model\auth\AuthPermission;
 use \app\common\model\auth\AuthPermissionRule;
+use app\common\utils\TreeUtils;
 use app\common\vo\ResultVo;
 
 /**
@@ -33,24 +34,12 @@ class PermissionRuleController extends BaseCheckUser
             $order = '';
         }
         $lists = AuthPermissionRule::getLists($where,$order);
-        $merge_list = AuthPermissionRule::cateMerge($lists,'id','pid',0);
+        $merge_list = TreeUtils::cateMerge($lists,'id','pid',0);
+        $tree_list = TreeUtils::cateTree($lists,'id','pid',0);
         $res['list'] = $merge_list;
+        $res['tree_list'] = $tree_list;
         return ResultVo::success($res);
 
-    }
-
-    /*
-     * 获取树形结构
-     */
-    public function tree()
-    {
-        $where = [];
-        $order = 'id ASC';
-        $lists = AuthPermissionRule::getLists($where,$order);
-        $tree_list = AuthPermissionRule::cateTree($lists,'id','pid',0);
-        $res = [];
-        $res['list'] = $tree_list;
-        return ResultVo::success($res);
     }
 
     /**
@@ -138,7 +127,7 @@ class PermissionRuleController extends BaseCheckUser
         }
         $AuthRuleList = AuthPermissionRule::all();
         // 查找当前选择的父级的所有上级
-        $parents = AuthPermissionRule::queryParentAll($AuthRuleList,'id','pid',$pid);
+        $parents = TreeUtils::queryParentAll($AuthRuleList,'id','pid',$pid);
         if (in_array($id,$parents)){
             return ResultVo::error(ErrorCode::NOT_NETWORK, "不能把自身/子级作为父级");
         }
