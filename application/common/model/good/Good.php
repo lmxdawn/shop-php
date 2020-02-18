@@ -10,6 +10,6 @@ use think\Model;
 class Good extends Model
 {
 
-    protected $pk = 'id';
+    protected $pk = 'good_id';
 
 }

@@ -18,12 +18,15 @@ class TreeUtils
     public static $icon = ['│', '├', '└'];
 
     /* 整合多维数组 */
-    public static function cateMerge($arr, $idName, $pidName, $pid = 0)
+    public static function cateMerge($arr, $idName, $pidName, $pid = 0, $isShowEmpty = false)
     {
         $result = array();
         foreach ($arr as $v) {
             if ($v[$pidName] == $pid) {
-                $v['children'] = self::cateMerge($arr, $idName, $pidName, $v[$idName]);
+                $children = self::cateMerge($arr, $idName, $pidName, $v[$idName], $isShowEmpty);
+                if ($children && $isShowEmpty) {
+                    $v['children'] = $children;
+                }
                 $result[] = $v;
             }
         }
