@@ -58,7 +58,16 @@ class CategoryAttrController extends BaseCheckUser
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "请输入下拉选项的可选值");
         }
         $model->type = $type;
-        $model->value = $type == 1 ? $data["value"] : "";
+        $value = $type == 1 ? explode("\n", $data["value"]) : [];
+        $temp_value = [];
+        foreach ($value as $v) {
+            if (mb_strlen($v) > 255) {
+                return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "可选值不能超过255个字符");
+            }
+            $temp_value[$v] = $v;
+        }
+        $temp_value = array_keys($temp_value);
+        $model->value = $value ? implode("\n", $temp_value) : "";
         $model->sort = !empty($data["sort"]) ? intval($data["sort"]) : 0;
         $model->create_time = date("Y-m-d H:i:s");
         $model->modified_time = date("Y-m-d H:i:s");
@@ -99,7 +108,16 @@ class CategoryAttrController extends BaseCheckUser
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "请输入下拉选项的可选值");
         }
         $model->type = $type;
-        $model->value = $type == 1 ? $data["value"] : "";
+        $value = $type == 1 ? explode("\n", $data["value"]) : [];
+        $temp_value = [];
+        foreach ($value as $v) {
+            if (mb_strlen($v) > 255) {
+                return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "选项值不能超过255个字符");
+            }
+            $temp_value[$v] = $v;
+        }
+        $temp_value = array_keys($temp_value);
+        $model->value = $value ? implode("\n", $temp_value) : "";
         $model->sort = !empty($data["sort"]) ? intval($data["sort"]) : 0;
         $model->modified_time = date("Y-m-d H:i:s");
         $result = $model->save();

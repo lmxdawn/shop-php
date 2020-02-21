@@ -53,6 +53,18 @@ class CategorySpecController extends BaseCheckUser
         $model = new GoodCategorySpec();
         $model->category_id = $data['category_id'] ?? 0;
         $model->name = $data['name'];
+        $is_add = !empty($data["is_add"]) ? 1 : 0;
+        $model->is_add = $is_add;
+        $value = !empty($data["value"]) ? explode("\n", $data["value"]) : [];
+        $temp_value = [];
+        foreach ($value as $v) {
+            if (mb_strlen($v) > 255) {
+                return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "选项值不能超过255个字符");
+            }
+            $temp_value[$v] = $v;
+        }
+        $temp_value = array_keys($temp_value);
+        $model->value = $value ? implode("\n", $temp_value) : "";
         $model->sort = !empty($data["sort"]) ? intval($data["sort"]) : 0;
         $model->create_time = date("Y-m-d H:i:s");
         $model->modified_time = date("Y-m-d H:i:s");
@@ -88,6 +100,18 @@ class CategorySpecController extends BaseCheckUser
         }
         $model->category_id = $data['category_id'] ?? 0;
         $model->name = $data['name'];
+        $is_add = !empty($data["is_add"]) ? 1 : 0;
+        $model->is_add = $is_add;
+        $value = !empty($data["value"]) ? explode("\n", $data["value"]) : [];
+        $temp_value = [];
+        foreach ($value as $v) {
+            if (mb_strlen($v) > 255) {
+                return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "选项值不能超过255个字符");
+            }
+            $temp_value[$v] = $v;
+        }
+        $temp_value = array_keys($temp_value);
+        $model->value = $value ? implode("\n", $temp_value) : "";
         $model->sort = !empty($data["sort"]) ? intval($data["sort"]) : 0;
         $model->modified_time = date("Y-m-d H:i:s");
         $result = $model->save();
