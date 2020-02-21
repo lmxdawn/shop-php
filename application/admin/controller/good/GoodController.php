@@ -10,6 +10,7 @@ use app\common\model\good\GoodCategory;
 use app\common\model\good\GoodCategoryAttr;
 use app\common\model\good\GoodCategoryList;
 use app\common\model\good\GoodCategorySpec;
+use app\common\model\good\GoodSku;
 use app\common\model\good\GoodSpecList;
 use app\common\utils\PublicFileUtils;
 use app\common\utils\TreeUtils;
@@ -102,17 +103,30 @@ class GoodController extends BaseCheckUser
         $info->attr_list = $attr_list;
 
         // 规格
-        $good_spec_list = GoodSpecList::where("good_id", $info->good_id)->field("spec_id,value")->order("id ASC")->select();
+        $good_spec_head_list = [];
+        $good_spec_list = GoodSpecList::where("good_id", $info->good_id)->field("spec_id,name,value")->order("id ASC")->select();
         $spec_list = [];
         foreach ($good_spec_list as $v) {
             $spec_value = trim($v->value) != "" ? explode(",", trim($v->value)) : [];
             $spec_list[$v->spec_id] = $spec_value;
+            $good_spec_head_list[] = [
+                "id" => $v["spec_id"],
+                "name" => $v["name"],
+            ];
         }
         $info->spec = [];
         $info->spec_list = $spec_list;
 
-        $info->good_spec_list = [];
-        $info->good_spec_head_list = [];
+        $good_sku = GoodSku::where("good_id", $info->good_id)->order("id ASC")->select();
+        $good_sku_list = [];
+        foreach ($good_sku as $v) {
+            $spec_value_list = trim($v->spec_value_list) != "" ? explode(",", trim($v->spec_value_list)) : [];
+            unset($v->spec_value_list);
+            $v["spec_list"] = $spec_value_list;
+            $good_sku_list[] = $v;
+        }
+        $info->good_spec_list = $good_sku_list;
+        $info->good_spec_head_list = $good_spec_head_list;
 
 
         return ResultVo::success($info);
@@ -218,6 +232,8 @@ class GoodController extends BaseCheckUser
         }
         $date_time = date("Y-m-d H:i:s");
         // return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, $data);
+        $store_count = $data["store_count"] ?? 0;
+        $sku_refresh = $data["sku_refresh"] ?? false;
         $model = new Good();
         $model->good_name = $data['good_name'];
         $model->good_remark = $data['good_remark'] ?? "";
@@ -226,6 +242,7 @@ class GoodController extends BaseCheckUser
         $model->cost_price = floatval($data["cost_price"]);
         $model->weight = !empty($data["weight"]) ? floatval($data["weight"]) : 0;
         $model->volume = !empty($data["volume"]) ? floatval($data["volume"]) : 0;
+        $model->store_count = intval($store_count);
         $model->virtual_sales_sum = !empty($data["virtual_sales_sum"]) ? intval($data["virtual_sales_sum"]) : 0;
         $model->original_img = $data["original_img"];
         $model->imgs = implode(",", $data["imgs"]);
@@ -248,21 +265,58 @@ class GoodController extends BaseCheckUser
             $temp["create_time"] = $date_time;
             $attr_list[] = $temp;
         }
-        $spec = !empty($data["spec"]) && is_array($data["spec"]) ? $data["spec"] : [];
+
         $spec_list = [];
-        foreach ($spec as $v) {
-            if (!isset($v["value"]) || $v["value"] === "") {
-                continue;
+        $sku_list = [];
+        if ($sku_refresh) {
+            $spec = !empty($data["spec"]) && is_array($data["spec"]) ? $data["spec"] : [];
+            $spec_list = [];
+            foreach ($spec as $v) {
+                if (empty($v["value"])) {
+                    continue;
+                }
+                $temp_value = [];
+                foreach ($v["value"] as $vv) {
+                    if (stripos($vv, ",") !== false) {
+                        return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "规格名称不能包含英文逗号，请换成中文逗号");
+                    }
+                    $temp_value[$vv] = $vv;
+                }
+                $temp = [];
+                $temp["spec_id"] = $v["id"];
+                $temp["value"] = $temp_value ? implode(",", array_keys($temp_value)) : "";
+                $temp["create_time"] = $date_time;
+                $spec_list[] = $temp;
             }
-            $temp_value = [];
-            foreach ($v["value"] as $vv) {
-                $temp_value[$vv] = $vv;
+
+            // 规格
+            $good_spec_list = !empty($data["good_spec_list"]) && is_array($data["good_spec_list"]) ? $data["good_spec_list"] : [];
+            $sku_list = [];
+            foreach ($good_spec_list as $v) {
+                $price = floatval($v["price"]);
+                $cost_price = floatval($v["cost_price"]);
+                $stock = intval($v["stock"]);
+                $spec_list = $v["spec_list"];
+                if ($price < 0) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "SKU价格不能小于0");
+                }
+                if ($cost_price < 0) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "SKU成本价格不能小于0");
+                }
+                if ($stock < 0) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "SKU库存不能小于0");
+                }
+                if (!is_array($spec_list) || empty($spec_list)) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "请至少选一个规格");
+                }
+                $temp = [];
+                $temp["price"] = $price;
+                $temp["cost_price"] = $cost_price;
+                $temp["stock"] = $stock;
+                $temp["spec_value_list"] = implode(",", $spec_list);
+                $temp["create_time"] = $date_time;
+                $sku_list[] = $temp;
             }
-            $temp = [];
-            $temp["spec_id"] = $v["id"];
-            $temp["value"] = $temp_value ? implode(",", array_keys($temp_value)) : "";
-            $temp["create_time"] = $date_time;
-            $spec_list[] = $temp;
         }
 
         Db::startTrans();
@@ -279,23 +333,37 @@ class GoodController extends BaseCheckUser
                 $temp["create_time"] = $date_time;
                 $category_list[] = $temp;
             }
-            GoodCategoryList::insertAll($category_list);
+            if ($category_list) {
+                GoodCategoryList::insertAll($category_list);
+            }
 
             // 属性
             foreach ($attr_list as $k=>$v) {
                 $attr_list[$k]["good_id"] = intval($model->good_id);
             }
-            GoodAttrList::insertAll($attr_list);
+            if ($attr_list) {
+                GoodAttrList::insertAll($attr_list);
+            }
 
             // 规格
             foreach ($spec_list as $k=>$v) {
                 $spec_list[$k]["good_id"] = intval($model->good_id);
             }
-            GoodSpecList::insertAll($spec_list);
+            if ($spec_list) {
+                GoodSpecList::insertAll($spec_list);
+            }
+
+            // 规格
+            foreach ($sku_list as $k=>$v) {
+                $sku_list[$k]["good_id"] = intval($model->good_id);
+            }
+            if ($sku_list) {
+                GoodSku::insertAll($sku_list);
+            }
             Db::commit();
         }catch (\Exception $exception) {
             Db::rollback();
-            return ResultVo::error(ErrorCode::NOT_NETWORK);
+            return ResultVo::error(ErrorCode::NOT_NETWORK, $exception->getLine());
         }
 
         if (!$result){
@@ -335,6 +403,8 @@ class GoodController extends BaseCheckUser
         if (!$model){
             return ResultVo::error(ErrorCode::DATA_NOT);
         }
+        $sku_refresh = $data["sku_refresh"] ?? false;
+        $store_count = $data["store_count"] ?? 0;
         $model->good_name = $data['good_name'];
         $model->good_remark = $data['good_remark'] ?? "";
         $model->shop_price = floatval($data["shop_price"]);
@@ -342,6 +412,7 @@ class GoodController extends BaseCheckUser
         $model->cost_price = floatval($data["cost_price"]);
         $model->weight = !empty($data["weight"]) ? floatval($data["weight"]) : 0;
         $model->volume = !empty($data["volume"]) ? floatval($data["volume"]) : 0;
+        $model->store_count = intval($store_count);
         $model->virtual_sales_sum = !empty($data["virtual_sales_sum"]) ? intval($data["virtual_sales_sum"]) : 0;
         $model->original_img = $data["original_img"];
         $model->imgs = implode(",", $data["imgs"]);
@@ -378,38 +449,83 @@ class GoodController extends BaseCheckUser
             $attr_list[] = $temp;
         }
 
-        $spec = !empty($data["spec"]) && is_array($data["spec"]) ? $data["spec"] : [];
         $spec_list = [];
-        foreach ($spec as $v) {
-            if (!isset($v["value"]) || $v["value"] === "") {
-                continue;
+        $sku_list = [];
+        if ($sku_refresh) {
+            $spec = !empty($data["spec"]) && is_array($data["spec"]) ? $data["spec"] : [];
+            $spec_list = [];
+            foreach ($spec as $v) {
+                if (empty($v["value"])) {
+                    continue;
+                }
+                $temp_value = [];
+                foreach ($v["value"] as $vv) {
+                    if (stripos($vv, ",") !== false) {
+                        return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "规格名称不能包含英文逗号，请换成中文逗号");
+                    }
+                    $temp_value[$vv] = $vv;
+                }
+                $temp = [];
+                $temp["good_id"] = $good_id;
+                $temp["spec_id"] = $v["id"];
+                $temp["name"] = $v["name"];
+                $temp["value"] = $temp_value ? implode(",", array_keys($temp_value)) : "";
+                $temp["create_time"] = $date_time;
+                $spec_list[] = $temp;
             }
-            $temp_value = [];
-            foreach ($v["value"] as $vv) {
-                $temp_value[$vv] = $vv;
+            // 规格
+            $good_spec_list = !empty($data["good_spec_list"]) && is_array($data["good_spec_list"]) ? $data["good_spec_list"] : [];
+            $sku_list = [];
+            foreach ($good_spec_list as $v) {
+                $price = floatval($v["price"]);
+                $cost_price = floatval($v["cost_price"]);
+                $stock = intval($v["stock"]);
+                $temp_spec_list = $v["spec_list"];
+                if ($price < 0) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "SKU价格不能小于0");
+                }
+                if ($cost_price < 0) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "SKU成本价格不能小于0");
+                }
+                if ($stock < 0) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "SKU库存不能小于0");
+                }
+                if (!is_array($temp_spec_list) || empty($temp_spec_list)) {
+                    return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "请至少选一个规格");
+                }
+                $temp = [];
+                $temp["good_id"] = $good_id;
+                $temp["price"] = $price;
+                $temp["cost_price"] = $cost_price;
+                $temp["stock"] = $stock;
+                $temp["spec_value_list"] = implode(",", $temp_spec_list);
+                $temp["create_time"] = $date_time;
+                $sku_list[] = $temp;
             }
-            $temp = [];
-            $temp["good_id"] = $good_id;
-            $temp["spec_id"] = $v["id"];
-            $temp["name"] = $v["name"];
-            $temp["value"] = $temp_value ? implode(",", array_keys($temp_value)) : "";
-            $temp["create_time"] = $date_time;
-            $spec_list[] = $temp;
         }
-
-        // 规格
-        $good_spec_list = !empty($data["good_spec_list"]) && is_array($data["good_spec_list"]) ? $data["good_spec_list"] : [];
 
 
         Db::startTrans();
         try {
             $result = $model->save();
             GoodCategoryList::where("good_id", $good_id)->delete();
-            GoodCategoryList::insertAll($category_list);
+            if ($category_list) {
+                GoodCategoryList::insertAll($category_list);
+            }
             GoodAttrList::where("good_id", $good_id)->delete();
-            GoodAttrList::insertAll($attr_list);
-            GoodSpecList::where("good_id", $good_id)->delete();
-            GoodSpecList::insertAll($spec_list);
+            if ($attr_list) {
+                GoodAttrList::insertAll($attr_list);
+            }
+            if ($sku_refresh) {
+                GoodSpecList::where("good_id", $good_id)->delete();
+                if ($spec_list) {
+                    GoodSpecList::insertAll($spec_list);
+                }
+                GoodSku::where("good_id", $good_id)->delete();
+                if ($sku_list) {
+                    GoodSku::insertAll($sku_list);
+                }
+            }
             Db::commit();
         }catch (\Exception $exception) {
             Db::rollback();
@@ -433,6 +549,8 @@ class GoodController extends BaseCheckUser
             Good::where('good_id',$good_id)->delete();
             GoodCategoryList::where("good_id", $good_id)->delete();
             GoodAttrList::where("good_id", $good_id)->delete();
+            GoodSpecList::where("good_id", $good_id)->delete();
+            GoodSku::where("good_id", $good_id)->delete();
             Db::commit();
         }catch (\Exception $exception) {
             Db::rollback();

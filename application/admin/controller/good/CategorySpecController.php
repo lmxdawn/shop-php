@@ -50,6 +50,9 @@ class CategorySpecController extends BaseCheckUser
         if (empty($data['name'])){
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL);
         }
+        if (stripos($data['name'], ",") !== false) {
+            return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "名称不能包含英文逗号，请换成中文逗号");
+        }
         $model = new GoodCategorySpec();
         $model->category_id = $data['category_id'] ?? 0;
         $model->name = $data['name'];
@@ -89,6 +92,9 @@ class CategorySpecController extends BaseCheckUser
         }
         if (empty($data['name'])){
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL);
+        }
+        if (stripos($data['name'], ",") !== false) {
+            return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "名称不能包含英文逗号，请换成中文逗号");
         }
         $id = $data['id'];
         // 模型
