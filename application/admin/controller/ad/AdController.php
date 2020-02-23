@@ -5,6 +5,7 @@ namespace app\admin\controller\ad;
 use app\admin\controller\BaseCheckUser;
 use app\common\enums\ErrorCode;
 use \app\common\model\ad\Ad;
+use app\common\model\ad\AdSite;
 use app\common\utils\PublicFileUtils;
 use app\common\vo\ResultVo;
 
@@ -24,6 +25,13 @@ class AdController extends BaseCheckUser
         $title = request()->get('title', '');
         if ($title !== ''){
             $where[] = ['title','=',$title];
+        }
+        $site_id = request()->get('site_id', '');
+        if (!empty($site_id)){
+            $ad_ids = AdSite::where("site_id", $site_id)->value("ad_ids");
+            $ad_ids = $ad_ids != "" ? explode(",", $ad_ids) : [];
+            $ad_ids = array_unique($ad_ids);
+            $where[] = ['ad_id','in',$ad_ids];
         }
         $limit = request()->get('limit/d', 20);
         //分页配置
@@ -47,9 +55,17 @@ class AdController extends BaseCheckUser
             $v["ios_version_list"] = !empty($v["ios_version_list"]) ? explode(",", $v["ios_version_list"]) : [];
         }
 
+        $site_lists = [];
+        if (request()->get("page") <= 1) {
+            $site_lists = AdSite::where([])
+                ->field('site_id,site_name,site_key,describe,ad_ids,modified_time')
+                ->select();
+        }
+
         $res = [];
         $res["total"] = $lists->total();
         $res["list"] = $lists->items();
+        $res["site_lists"] = $site_lists;
         return ResultVo::success($res);
 
     }
@@ -63,10 +79,12 @@ class AdController extends BaseCheckUser
             || !isset($data['jump_type'])
             || empty($data['pic'])
             || $data['jump_type'] < 0
-            || $data['jump_type'] > 2
+            || $data['jump_type'] > 4
             || ($data['jump_type'] == 0 && empty($data["jump_url"])) // 如果是 web 跳转类型，则 跳转链接必须有值
             || ($data['jump_type'] == 1 && empty($data["ios_url"]) && empty($data["android_url"])) // 如果是 APP内 跳转类型，则 ios 和 android 的链接必须一个有值
             || ($data['jump_type'] == 2 && empty($data["jump_url"]) && empty($data["wxa_appid"])) // 如果是 小程序 跳转类型，则 跳转链接 和 小程序id 必须有值
+            || ($data['jump_type'] == 3 && empty($data["jump_url"])) // 如果是 web 跳转类型，则 跳转链接必须有值
+            || ($data['jump_type'] == 4 && empty($data["jump_url"])) // 如果是 web 跳转类型，则 跳转链接必须有值
             // 渠道名单
             || (!empty($data["channel_type"]) && empty($data['channel_list']))
             || (!empty($data['channel_list']) && count($data['channel_list']) > 15)
@@ -160,10 +178,12 @@ class AdController extends BaseCheckUser
             || !isset($data['jump_type'])
             || empty($data['pic'])
             || $data['jump_type'] < 0
-            || $data['jump_type'] > 2
+            || $data['jump_type'] > 4
             || ($data['jump_type'] == 0 && empty($data["jump_url"])) // 如果是 web 跳转类型，则 跳转链接必须有值
             || ($data['jump_type'] == 1 && empty($data["ios_url"]) && empty($data["android_url"])) // 如果是 APP内 跳转类型，则 ios 和 android 的链接必须一个有值
             || ($data['jump_type'] == 2 && empty($data["jump_url"]) && empty($data["wxa_appid"])) // 如果是 小程序 跳转类型，则 跳转链接 和 小程序id 必须有值
+            || ($data['jump_type'] == 3 && empty($data["jump_url"])) // 如果是 web 跳转类型，则 跳转链接必须有值
+            || ($data['jump_type'] == 4 && empty($data["jump_url"])) // 如果是 web 跳转类型，则 跳转链接必须有值
             // 渠道名单
             || (!empty($data["channel_type"]) && empty($data['channel_list']))
             || (!empty($data['channel_list']) && count($data['channel_list']) > 15)

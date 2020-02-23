@@ -33,7 +33,7 @@ class SiteController extends BaseCheckUser
             'list_rows' => ($limit <= 0 || $limit > 20) ? 20 : $limit,
         ];
         $lists = AdSite::where($where)
-            ->field('site_id,site_name,describe,ad_ids,modified_time')
+            ->field('site_id,site_name,site_key,describe,ad_ids,modified_time')
             ->paginate($paginate);
         $where_ad_ids = [];
         foreach ($lists as $v) {
@@ -106,11 +106,15 @@ class SiteController extends BaseCheckUser
      */
     public function save(){
         $data = request()->post();
-        if (empty($data['site_name'])){
+        if (empty($data['site_name']) || empty($data['site_key'])){
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL);
+        }
+        if (AdSite::where("site_key", $data["site_key"])->value("site_key")) {
+            return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "该索引已经存在");
         }
         $ad_site = new AdSite();
         $ad_site->site_name = $data['site_name'];
+        $ad_site->site_key = $data['site_key'];
         if (!empty($data['describe'])) {
             $ad_site->describe = $data['describe'];
         }
@@ -142,7 +146,7 @@ class SiteController extends BaseCheckUser
      */
     public function edit(){
         $data = request()->post();
-        if (empty($data['site_id']) || empty($data['site_name'])){
+        if (empty($data['site_id']) || empty($data['site_name']) || empty($data['site_key'])){
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL);
         }
         $site_id = $data['site_id'];
@@ -153,7 +157,13 @@ class SiteController extends BaseCheckUser
         if (!$ad_site){
             return ResultVo::error(ErrorCode::DATA_NOT);
         }
+
+        if (AdSite::where("site_key", $data["site_key"])->value("site_id") != $site_id) {
+            return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "该索引已经存在");
+        }
+
         $ad_site->site_name = $data['site_name'];
+        $ad_site->site_key = $data['site_key'];
         if (!empty($data['describe'])) {
             $ad_site->describe = $data['describe'];
         }
