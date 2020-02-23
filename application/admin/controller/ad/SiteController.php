@@ -158,7 +158,8 @@ class SiteController extends BaseCheckUser
             return ResultVo::error(ErrorCode::DATA_NOT);
         }
 
-        if (AdSite::where("site_key", $data["site_key"])->value("site_id") != $site_id) {
+        $is_site_id = AdSite::where("site_key", $data["site_key"])->value("site_id");
+        if ($is_site_id && $is_site_id != $site_id) {
             return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL, "该索引已经存在");
         }
 

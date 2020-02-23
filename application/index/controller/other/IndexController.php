@@ -1,11 +1,11 @@
 <?php
-namespace app\index\controller;
+namespace app\index\controller\other;
 
 use app\common\exception\JsonException;
 use app\common\enums\ErrorCode;
 use app\common\vo\ResultVo;
 
-class Index
+class IndexController
 {
     public function index()
     {
