@@ -91,6 +91,7 @@ class GoodController extends BaseCheckUser
         // 商品推荐
         $info->is_new = $info->is_new == 1 ? true : false;
         $info->is_recommend = $info->is_recommend == 1 ? true : false;
+        $info->is_hot = $info->is_hot == 1 ? true : false;
 
         // 分类
         $good_category_list = GoodCategoryList::where("good_id", $info->good_id)->field("category_id")->order("id ASC")->select();
@@ -245,6 +246,8 @@ class GoodController extends BaseCheckUser
         $new_sort = !empty($data["new_sort"]) ? intval($data["new_sort"]) : 0;
         $is_recommend = !empty($data["is_recommend"]) ? 1 : 0;
         $recommend_sort = !empty($data["recommend_sort"]) ? intval($data["recommend_sort"]) : 0;
+        $is_hot = !empty($data["is_hot"]) ? 1 : 0;
+        $hot_sort = !empty($data["hot_sort"]) ? intval($data["hot_sort"]) : 0;
         $model = new Good();
         $model->good_name = $data['good_name'];
         $model->good_remark = $data['good_remark'] ?? "";
@@ -264,6 +267,8 @@ class GoodController extends BaseCheckUser
         $model->new_sort = $new_sort;
         $model->is_recommend = $is_recommend;
         $model->recommend_sort = $recommend_sort;
+        $model->is_hot = $is_hot;
+        $model->hot_sort = $hot_sort;
         $model->create_time = $date_time;
         $model->modified_time = $date_time;
         $attr = !empty($data["attr"]) && is_array($data["attr"]) ? $data["attr"] : [];
@@ -425,6 +430,8 @@ class GoodController extends BaseCheckUser
         $new_sort = !empty($data["new_sort"]) ? intval($data["new_sort"]) : 0;
         $is_recommend = !empty($data["is_recommend"]) ? 1 : 0;
         $recommend_sort = !empty($data["recommend_sort"]) ? intval($data["recommend_sort"]) : 0;
+        $is_hot = !empty($data["is_hot"]) ? 1 : 0;
+        $hot_sort = !empty($data["hot_sort"]) ? intval($data["hot_sort"]) : 0;
         $model->good_name = $data['good_name'];
         $model->good_remark = $data['good_remark'] ?? "";
         $model->shop_price = floatval($data["shop_price"]);
@@ -443,6 +450,8 @@ class GoodController extends BaseCheckUser
         $model->new_sort = $new_sort;
         $model->is_recommend = $is_recommend;
         $model->recommend_sort = $recommend_sort;
+        $model->is_hot = $is_hot;
+        $model->hot_sort = $hot_sort;
         $model->create_time = date("Y-m-d H:i:s");
         $model->modified_time = date("Y-m-d H:i:s");
 

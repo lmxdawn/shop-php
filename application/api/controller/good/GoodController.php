@@ -74,4 +74,26 @@ class GoodController
         }
         return ResultVo::success($list);
     }
+
+    /**
+     * 热门商品
+     */
+    public function hot() {
+        $page = request()->get('page/d');
+        $count = request()->get('count/d');
+        $offset = $page <= 0 ? 1 : $page;
+        $limit = $count > 50 || $count <= 0 ? 50 : $count;
+        $offset = ($offset - 1) * $limit;
+        // 新品商品
+        $list = Good::where("is_hot", 1)
+            ->order("hot_sort DESC,create_time DESC")
+            ->limit($offset, $limit)
+            ->select();
+        foreach ($list as $v) {
+            $v->original_img = PublicFileUtils::createUploadUrl($v->original_img);
+            $v->sales_sum = $v->virtual_sales_sum + $v->sales_sum;
+            unset($v->virtual_sales_sum);
+        }
+        return ResultVo::success($list);
+    }
 }
