@@ -32,7 +32,7 @@ class Ad extends Model
         // 如果是注册不满了36小时的用户，则是新用户
         $user_type = $create_time && $create_time > 0 && (time() - $create_time < 36 * 3600) ? 1 : 0;
 
-        $ad_site = AdSite::where('site_key',$site_key)
+        $ad_site = Member::where('site_key',$site_key)
             ->field('site_key,site_name,describe,ad_ids')
             ->find();
         $res = [];
