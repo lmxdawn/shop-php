@@ -19,11 +19,69 @@ class OrderController extends CheckLoginController
 {
 
     /**
+     * 列表
+     */
+    public function index() {
+        $status = request()->get("status", "");
+
+        $where = [];
+        $where[] = ["member_id", "=", $this->member_id];
+        if ($status !== "") {
+            $where[] = ["status", "=", intval($status)];
+        }
+
+        $list = Order::where($where)
+            ->where("member_id", $this->member_id)
+            ->select();
+
+        $order_list_map = [];
+        $order_nums = [];
+        foreach ($list as $v) {
+            $order_num = $v->order_num;
+            $order_nums[] = $order_num;
+            $order_list_map[$order_num] = $v;
+        }
+
+        $order_good_list = OrderGood::where("order_num", "in", $order_nums)
+            ->order("id ASC")
+            ->select();
+
+        $good_ids = [];
+        $order_good_list_map = [];
+        foreach ($order_good_list as $v) {
+            $good_id = $v->good_id;
+            $good_ids[] = $good_id;
+            $order_good_list_map[$v->order_num][] = $v;
+        }
+        $good_ids = array_unique($good_ids);
+
+        $good = Good::where("good_id", "in", $good_ids)
+            ->select();
+        $good_list_map = [];
+        foreach ($good as $v) {
+            $v->original_img = PublicFileUtils::createUploadUrl($v->original_img);
+            $good_list_map[$v->good_id] = $v;
+        }
+
+        foreach ($list as $v) {
+            $temp_good_list = [];
+            $temp_good_ids = $order_good_list_map[$v->order_num];
+            foreach ($temp_good_ids as $v1) {
+                $item = $good_list_map[$v1->good_id];
+                $item["count"] = $v1["count"];
+                $item["price"] = $v1["price"];
+                $item["money"] = $v1["money"];
+                $temp_good_list[] = $item;
+            }
+            $v->good_list = $temp_good_list;
+        }
+
+        return ResultVo::success($list);
+
+    }
+
+    /**
      * 下单
-     * @return \think\response\Json
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
      */
     public function create() {
         $address_id = request()->post("address_id/d");
@@ -71,6 +129,7 @@ class OrderController extends CheckLoginController
                 "order_num" => $order_num,
                 "count" => $count,
                 "price" => $price,
+                "money" => bcmul($count, $price, 2),
                 "create_time" => $date_time,
             ];
             $sum_money = bcadd($money, $sum_money, 2);
@@ -156,8 +215,9 @@ class OrderController extends CheckLoginController
         foreach ($good_ids as $v) {
             $item = $order_good_list_map[$v];
             $oItem = $order_good_map[$v];
-            $item["money"] = $money = bcmul($oItem["price"], $oItem["count"], 2);
             $item["count"] = $oItem["count"];
+            $item["price"] = $oItem["price"];
+            $item["money"] = $oItem["money"];
             $good_list[] = $item;
         }
 
@@ -252,6 +312,29 @@ class OrderController extends CheckLoginController
         Order::where("order_num", $order_num)
             ->where("member_id", $this->member_id)
             ->setField("status", 4);
+
+        return ResultVo::success();
+    }
+
+    /**
+     * 确认
+     */
+    public function ok() {
+
+        $order_num = request()->post('order_num');
+        $order = Order::where("order_num", $order_num)
+            ->where("member_id", $this->member_id)
+            ->find();
+        if (!$order) {
+            return ResultVo::error(ErrorCode::DATA_NOT);
+        }
+        if ($order->status != 1 && $order->status != 2) {
+            return ResultVo::error(ErrorCode::DATA_NOT, "该状态不能收货");
+        }
+
+        Order::where("order_num", $order_num)
+            ->where("member_id", $this->member_id)
+            ->setField("status", 3);
 
         return ResultVo::success();
     }

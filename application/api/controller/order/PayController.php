@@ -87,6 +87,7 @@ class PayController
                 // 修改订单号
                 $up_order = [];
                 $up_order["status"] = 1;
+                $up_order["pay_time"] = date("Y-m-d H:i:s");
                 $order_res = Order::where("order_num", $order_num)->where("status", 0)->update($up_order);
                 if (!$order_res) {
                     Db::rollback();

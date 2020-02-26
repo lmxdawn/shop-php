@@ -20,7 +20,7 @@ class AddressController extends CheckLoginController
         $limit = $count > 50 || $count <= 0 ? 50 : $count;
         $offset = ($offset - 1) * $limit;
         $list = OrderAddress::where("member_id", $this->member_id)
-            ->limit("create_time DESC")
+            ->order("create_time DESC")
             ->limit($offset, $limit)
             ->select();
 
