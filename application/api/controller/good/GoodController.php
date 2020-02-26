@@ -2,14 +2,12 @@
 namespace app\api\controller\good;
 
 use app\api\service\MemberService;
-use app\common\exception\JsonException;
 use app\common\enums\ErrorCode;
 use app\common\model\good\Good;
-use app\common\model\good\GoodAttrList;
 use app\common\model\good\GoodCategoryList;
 use app\common\model\good\GoodComment;
-use app\common\model\good\GoodSku;
-use app\common\model\good\GoodSpecList;
+use app\common\model\order\OrderAddress;
+use app\common\utils\MemberUtils;
 use app\common\utils\PublicFileUtils;
 use app\common\vo\ResultVo;
 
@@ -20,7 +18,6 @@ class GoodController
         $page = request()->get('page/d');
         $count = request()->get('count/d');
         $category_id = request()->get('category_id', '');
-        $is_hot = request()->get('is_hot', '');
         $key = request()->get('key', '');
         $offset = $page <= 0 ? 1 : $page;
         $limit = $count > 50 || $count <= 0 ? 50 : $count;
@@ -109,8 +106,19 @@ class GoodController
 
         $info->good_comment = $good_comment;
 
-        return ResultVo::success($info);
 
+        $login_info = MemberUtils::checkToken();
+        $member_id = $login_info["member_id"] ?? 0;
+        // 默认地址
+        $address = new \stdClass();
+        if ($member_id > 0) {
+            $address = OrderAddress::where("member_id", $member_id)
+                ->where("is_default", 1)
+                ->find();
+        }
+        $info->address = $address;
+
+        return ResultVo::success($info);
 
     }
 

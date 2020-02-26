@@ -22,9 +22,9 @@ class Ad extends Model
      * @throws \think\exception\DbException
      */
     public static function listBySiteKey($site_key) {
-        $app_name = request()->cookie("app_name");
-        $app_version = request()->cookie("app_version");
-        $channel = request()->cookie("channel");
+        $app_name = request()->param("app_name");
+        $app_version = request()->param("app_version");
+        $channel = request()->param("app_channel");
         $user_create_time = request()->get("user_create_time");
 
         // 判断用户是否是新用户

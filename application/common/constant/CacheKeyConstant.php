@@ -13,6 +13,9 @@ class CacheKeyConstant
 {
 
     // 管理员 登录 token key
-    const ADMIN_LOGIN_KEY = "admin:login:";
+    const ADMIN_LOGIN_KEY = "a:l:";
+    // 用户的 登录 token key
+    const MEMBER_LOGIN_KEY = "u:l:";
+
 
 }

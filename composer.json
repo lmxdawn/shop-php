@@ -17,7 +17,10 @@
     ],
     "require": {
         "php": ">=7.0",
-        "topthink/framework": "5.1.*"
+        "topthink/framework": "5.1.*",
+      "ext-gd": "*",
+        "yansongda/pay": "^2.9",
+        "ext-bcmath": "*"
     },
     "autoload": {
         "psr-4": {
