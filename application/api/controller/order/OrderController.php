@@ -8,6 +8,7 @@ use app\api\controller\CheckLoginController;
 use app\api\service\OrderService;
 use app\common\enums\ErrorCode;
 use app\common\model\good\Good;
+use app\common\model\good\GoodComment;
 use app\common\model\order\Order;
 use app\common\model\order\OrderAddress;
 use app\common\model\order\OrderGood;
@@ -335,6 +336,66 @@ class OrderController extends CheckLoginController
         Order::where("order_num", $order_num)
             ->where("member_id", $this->member_id)
             ->setField("status", 3);
+
+        return ResultVo::success();
+    }
+
+
+    /**
+     * 评价
+     */
+    public function comment() {
+
+        $order_num = request()->post('order_num');
+        $order = Order::where("order_num", $order_num)
+            ->where("member_id", $this->member_id)
+            ->find();
+        if (!$order) {
+            return ResultVo::error(ErrorCode::DATA_NOT);
+        }
+        if ($order->status != 3) {
+            return ResultVo::error(ErrorCode::NOT_NETWORK);
+        }
+
+        $res = Order::where("order_num", $order_num)
+            ->where("member_id", $this->member_id)
+            ->where("status", 3)
+            ->setField("status", 5);
+        if (!$res) {
+            return ResultVo::error(ErrorCode::NOT_NETWORK);
+        }
+
+        $good_list = request()->post("good_list");
+        if (empty($good_list) || !is_array($good_list)) {
+            return ResultVo::error(ErrorCode::DATA_VALIDATE_FAIL);
+        }
+        $good_list_map = [];
+        foreach ($good_list as $v) {
+            $good_list_map[$v["good_id"]] = $v;
+        }
+
+        $order_good = OrderGood::where("order_num", $order_num)
+            ->order("id ASC")
+            ->select();
+        $install = [];
+        $rates = ["非常差", "差", "一般", "好", "非常好"];
+        foreach ($order_good as $v) {
+            $good_id = $v->good_id;
+            $item = $good_list_map[$good_id];
+            $rate = $item["rate"] ?? 5;
+            $rate = intval($rate);
+            $install[] = [
+                "good_id" => $good_id,
+                "member_id" => $this->member_id,
+                "content" => $item["content"] ?? "",
+                "rate" => !empty($rates[$rate - 1]) ? $rate : 5,
+                "rate_name" => $rates[$rate - 1] ?? "非常好",
+                "create_time" => date("Y-m-d H:i:s"),
+            ];
+        }
+        $good_comment = new GoodComment();
+        $good_comment->insertAll($install);
+
 
         return ResultVo::success();
     }

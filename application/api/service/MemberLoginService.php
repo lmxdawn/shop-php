@@ -17,9 +17,9 @@ class MemberLoginService
     /**
      * 微信公众号登录
      */
-    public static function weChatMp($wap_user_info, $isTrial = false)
+    public static function weChatMp($wap_user_info, $infoKey)
     {
-        $unionid = $wap_user_info['unionid'];
+        $unionid = $wap_user_info[$infoKey];
         $openid = $wap_user_info['openid'];
         $user_we_chat = MemberWeChat::where("unionid", $unionid)
             ->field("member_id")
@@ -39,7 +39,7 @@ class MemberLoginService
             $data["avatar"] = $wap_user_info['headimgurl'];
             $data["sex"] = $wap_user_info['sex'];
 
-            $member_id = MemberService::createUser($data, $user_we_chat, $isTrial);
+            $member_id = MemberService::createUser($data, $user_we_chat);
             if (!$member_id) {
                 return false;
             }
@@ -61,8 +61,8 @@ class MemberLoginService
     /**
      * 微信小程序登录
      */
-    public static function weChatApplet($wax_user_info) {
-        $openid = $wax_user_info['openId'];
+    public static function weChatApplet($wax_user_info, $infoKey) {
+        $openid = $wax_user_info[$infoKey];
         $user_we_chat = MemberWeChat::where("unionid", $openid)
             ->field("member_id")
             ->find();

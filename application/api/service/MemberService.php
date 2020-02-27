@@ -14,10 +14,9 @@ class MemberService
      * 创建用户
      * @param $data
      * @param Model $member_third
-     * @param boolean $isTrial 是否加入试用
      * @return bool
      */
-    public static function createUser($data, &$member_third = null, $isTrial = false) {
+    public static function createUser($data, &$member_third = null) {
         $name = !empty($data["name"]) ? $data["name"] : "U_" . time();
         $avatar = !empty($data["avatar"]) ? $data["avatar"] : "";
         $sex_str = !empty($data["sex"]) ? $data["sex"] : "";

@@ -7,6 +7,7 @@ namespace app\api\controller\order;
 use app\api\controller\CheckLoginController;
 use app\common\enums\ErrorCode;
 use app\common\model\good\Good;
+use app\common\model\member\Member;
 use app\common\model\order\OrderCart;
 use app\common\utils\PublicFileUtils;
 use app\common\vo\ResultVo;
@@ -63,12 +64,18 @@ class CartController extends CheckLoginController
         $where[] = ["member_id", "=", $this->member_id];
         $where[] = ["good_id", "=", $good_id];
         $orderCart = OrderCart::where($where)->find();
-        if ($count <= 0) {
+        if ($orderCart && $count <= 0) {
+            Member::where("member_id", $this->member_id)->setInc("cart_count", $orderCart->count ?? 0);
             OrderCart::where($where)->delete();
             return ResultVo::success();
         }
 
+        if ($count <= 0) {
+            return ResultVo::error(ErrorCode::DATA_NOT);
+        }
+
         $date_time = date("Y-m-d H:i:s");
+        Member::where("member_id", $this->member_id)->setInc("cart_count", $count);
         if ($orderCart) {
             $up_data = [];
             $up_data["count"] = $type == 1 ? Db::raw("count + $count") : $count;
@@ -103,6 +110,11 @@ class CartController extends CheckLoginController
         $where = [];
         $where[] = ["member_id", "=", $this->member_id];
         $where[] = ["good_id", "in", $good_ids];
+
+        $count = OrderCart::where($where)->value("count");
+        $count = intval($count);
+        Member::where("member_id", $this->member_id)->setDec("cart_count", $count);
+
         OrderCart::where($where)->delete();
 
         return ResultVo::success();

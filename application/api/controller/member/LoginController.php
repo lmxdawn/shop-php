@@ -6,16 +6,12 @@ namespace app\api\controller\member;
 
 use app\api\service\MemberLoginService;
 use app\api\service\MemberService;
-use app\api\service\UserLoginService;
-use app\api\service\UserService;
 use app\common\enums\ErrorCode;
 use app\common\model\member\MemberWeChat;
-use app\common\model\user\UserWeChat;
 use app\common\model\wx\WeChat;
 use app\common\model\wx\WeChatApplet;
 use app\common\model\wx\WeChatWap;
 use app\common\utils\MemberUtils;
-use app\common\utils\UserUtils;
 use app\common\vo\ResultVo;
 use think\Db;
 use think\facade\Hook;
@@ -59,22 +55,19 @@ class LoginController
      */
     public function byWeChatApplet()
     {
-        // $code = request()->post("code");
-        // $encryptedData = request()->post("encryptedData");
-        // $iv = request()->post("iv");
-        // // 获取小程序登录信息
-        // $wax_user_info = WeChatApplet::getInstance(WeChat::CONF_NAME_MINIAPP)->getUserInfo($code, $encryptedData, $iv);
-        // if ($wax_user_info === false || empty($wax_user_info['openId'])) {
-        //     return ResultVo::error(ErrorCode::DATA_NOT, "获取小程序用户信息失败");
-        // }
-        $wax_user_info['openId'] = "1111";
-        $wax_user_info['nickName'] = "1111";
-        $wax_user_info['avatarUrl'] = "resources/20200223/70012961c2603b591924564ebdf571d1.jpg";
-        $wax_user_info['gender'] = "男";
+        $code = request()->post("code");
+        $encryptedData = request()->post("encryptedData");
+        $iv = request()->post("iv");
+        // 获取小程序登录信息
+        $wax_user_info = WeChatApplet::getInstance(WeChat::CONF_NAME_MINIAPP)->getUserInfo($code, $encryptedData, $iv);
+        $infoKey = 'openId'; // 取值为：openId unionid
+        if ($wax_user_info === false || empty($wax_user_info[$infoKey])) {
+            return ResultVo::error(ErrorCode::DATA_NOT, "获取小程序用户信息失败");
+        }
         // 启动事务
         Db::startTrans();
         try {
-            $res_data = MemberLoginService::weChatApplet($wax_user_info);
+            $res_data = MemberLoginService::weChatApplet($wax_user_info, $infoKey);
             if (empty($res_data["member_id"])) {
                 Db::rollback();
                 return ResultVo::error(ErrorCode::NOT_NETWORK);
@@ -100,15 +93,16 @@ class LoginController
         $code = request()->post("code");
         // 获取小程序登录信息
         $wap_user_info = WeChatWap::getInstance(WeChat::CONF_NAME_MP)->getUserInfo($code);
-        if ($wap_user_info === false || empty($wap_user_info['openid']) || empty($wap_user_info['unionid'])) {
+
+        $infoKey = 'openid'; // 取值为：openid unionid
+        if ($wap_user_info === false || empty($wap_user_info[$infoKey])) {
             return ResultVo::error(ErrorCode::DATA_NOT, "获取用户信息失败");
         }
-
 
         // 启动事务
         Db::startTrans();
         try {
-            $res_data = MemberLoginService::weChatMp($wap_user_info);
+            $res_data = MemberLoginService::weChatMp($wap_user_info, $infoKey);
             if (empty($res_data["member_id"])) {
                 Db::rollback();
                 return ResultVo::error(ErrorCode::NOT_NETWORK);
