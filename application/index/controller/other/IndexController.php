@@ -10,7 +10,7 @@ class IndexController
     public function index()
     {
 
-        throw new JsonException(ErrorCode::AUTH_FAILED,"1111");
+        echo phpinfo();
 
     }
 
