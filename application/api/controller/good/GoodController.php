@@ -22,7 +22,7 @@ class GoodController
         $offset = $page <= 0 ? 1 : $page;
         $limit = $count > 50 || $count <= 0 ? 50 : $count;
         $offset = ($offset - 1) * $limit;
-        $order = "good_id DESC";
+        $order = "sort DESC,good_id DESC";
         $where = [];
         if ($key !== "") {
             $where[] = ['good_name', 'like', "%$key%"];
@@ -30,6 +30,7 @@ class GoodController
         if ($category_id !== "") {
             if ($category_id == -1) {
                 $where = [];
+                $where[] = ["status", "=", 1];
                 $where[] = ['is_hot', '=', 1];
                 $order = "hot_sort DESC,create_time DESC";
             } else {
@@ -46,9 +47,9 @@ class GoodController
                 $good_ids = array_unique($good_ids);
                 $where = [];
                 $where[] = ['good_id', 'in', $good_ids];
+                $where[] = ["status", "=", 1];
             }
         }
-
         // 新品商品
         $list = Good::where($where)
             ->order($order)
@@ -132,7 +133,8 @@ class GoodController
         $limit = $count > 50 || $count <= 0 ? 50 : $count;
         $offset = ($offset - 1) * $limit;
         // 新品商品
-        $list = Good::where("is_recommend", 1)
+        $list = Good::where("status", 1)
+            ->where("is_recommend", 1)
             ->order("recommend_sort DESC,create_time DESC")
             ->limit($offset, $limit)
             ->select();
@@ -154,7 +156,8 @@ class GoodController
         $limit = $count > 50 || $count <= 0 ? 50 : $count;
         $offset = ($offset - 1) * $limit;
         // 新品商品
-        $list = Good::where("is_hot", 1)
+        $list = Good::where("status", 1)
+            ->where("is_hot", 1)
             ->order("hot_sort DESC,create_time DESC")
             ->limit($offset, $limit)
             ->select();

@@ -22,7 +22,8 @@ class IndexController
         $cate_list = $cate_res["list"];
 
         // 新品商品
-        $good_new_list = Good::where("is_new", 1)
+        $good_new_list = Good::where("status", 1)
+            ->where("is_new", 1)
             ->order("new_sort DESC,create_time DESC")
             ->limit(4)
             ->select();

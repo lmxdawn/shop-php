@@ -52,13 +52,22 @@ class GoodController extends BaseCheckUser
             $where[] = ['good_id', 'in', $good_ids];
         }
         $lists = Good::where($where)
+            ->order("sort DESC")
             ->order("good_id DESC")
             ->paginate($paginate);
 
         foreach ($lists as $v) {
+            $imgs = explode(",", $v->imgs);
+            $temp = [];
+            foreach ($imgs as $pic_key => $pic) {
+                $temp[] = PublicFileUtils::createUploadUrl($pic);
+            }
+            $v->imgs = $imgs;
+            $v->imgs_url = $temp;
             $v->original_img_url = PublicFileUtils::createUploadUrl($v->original_img);
             $v->is_new = $v->is_new == 1 ? true : false;
             $v->is_recommend = $v->is_recommend == 1 ? true : false;
+            $v->is_hot = $v->is_hot == 1 ? true : false;
         }
 
         $res = [];
@@ -269,6 +278,7 @@ class GoodController extends BaseCheckUser
         $model->recommend_sort = $recommend_sort;
         $model->is_hot = $is_hot;
         $model->hot_sort = $hot_sort;
+        $model->sort = $data["sort"] ?? 0;
         $model->create_time = $date_time;
         $model->modified_time = $date_time;
         $attr = !empty($data["attr"]) && is_array($data["attr"]) ? $data["attr"] : [];
@@ -452,6 +462,7 @@ class GoodController extends BaseCheckUser
         $model->recommend_sort = $recommend_sort;
         $model->is_hot = $is_hot;
         $model->hot_sort = $hot_sort;
+        $model->sort = $data["sort"] ?? 0;
         $model->create_time = date("Y-m-d H:i:s");
         $model->modified_time = date("Y-m-d H:i:s");
 
@@ -590,6 +601,70 @@ class GoodController extends BaseCheckUser
             Db::rollback();
             return ResultVo::error(ErrorCode::NOT_NETWORK);
         }
+
+        return ResultVo::success();
+
+    }
+
+    /**
+     * 修改状态
+     */
+    public function status(){
+        $good_id = request()->post('good_id/d');
+        $status = request()->post('status/d');
+        $status = $status ? 1 : 0;
+        if (empty($good_id)){
+            return ResultVo::error(ErrorCode::HTTP_METHOD_NOT_ALLOWED);
+        }
+        Good::where('good_id',$good_id)->setField("status", $status);
+
+        return ResultVo::success();
+
+    }
+
+    /**
+     * 修改新品
+     */
+    public function is_new(){
+        $good_id = request()->post('good_id/d');
+        $is_new = request()->post('is_new/d');
+        $is_new = $is_new ? 1 : 0;
+        if (empty($good_id)){
+            return ResultVo::error(ErrorCode::HTTP_METHOD_NOT_ALLOWED);
+        }
+        Good::where('good_id',$good_id)->setField("is_new", $is_new);
+
+        return ResultVo::success();
+
+    }
+
+    /**
+     * 修改推荐
+     */
+    public function is_recommend(){
+        $good_id = request()->post('good_id/d');
+        $is_recommend = request()->post('is_recommend/d');
+        $is_recommend = $is_recommend ? 1 : 0;
+        if (empty($good_id)){
+            return ResultVo::error(ErrorCode::HTTP_METHOD_NOT_ALLOWED);
+        }
+        Good::where('good_id',$good_id)->setField("is_recommend", $is_recommend);
+
+        return ResultVo::success();
+
+    }
+
+    /**
+     * 修改热卖
+     */
+    public function is_hot(){
+        $good_id = request()->post('good_id/d');
+        $is_hot = request()->post('is_hot/d');
+        $is_hot = $is_hot ? 1 : 0;
+        if (empty($good_id)){
+            return ResultVo::error(ErrorCode::HTTP_METHOD_NOT_ALLOWED);
+        }
+        Good::where('good_id',$good_id)->setField("is_hot", $is_hot);
 
         return ResultVo::success();
 
